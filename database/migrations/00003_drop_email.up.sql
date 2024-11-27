@@ -1,0 +1,3 @@
+BEGIN;
+ALTER TABLE auth DROP COLUMN email;
+COMMIT;
