@@ -2,26 +2,24 @@ package dbhelper
 
 import (
 	"database/sql"
+	"time"
+	"todo-auth/database"
 
 	_ "github.com/lib/pq"
 )
 
-type DBWrapper struct {
-	DB *sql.DB
-}
+func CreateUser(username string, password string) error {
 
-func (db *DBWrapper) CreateUser(username, password string) error {
-
-	_, err := db.DB.Exec("INSERT INTO auth (username, password) VALUES ($1, $2)", username, password)
+	_, err := database.TODO.Exec("INSERT INTO auth (username, password) VALUES ($1, $2)", username, password)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (db *DBWrapper) UserExists(username, password string) error {
+func IsUserExists(username, password string) error {
 	var user string
-	err := db.DB.QueryRow("SELECT username FROM auth WHERE username = $1 AND password = $2", username, password).Scan(&user)
+	err := database.TODO.QueryRow("SELECT username FROM auth WHERE username = $1 AND password = $2", username, password).Scan(&user)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return err
@@ -30,8 +28,15 @@ func (db *DBWrapper) UserExists(username, password string) error {
 	}
 	return nil
 }
-func (db *DBWrapper) LogoutUser(username string) error {
-	_, err := db.DB.Exec("DELETE FROM session WHERE username = $1", username)
+func SetSession(username string, sessionID string) error {
+	_, err := database.TODO.Exec("INSERT INTO session (session_id, username, created_at) VALUES ($1, $2, $3)", sessionID, username, time.Now().UTC())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func DeleteSession(cookie string) error {
+	_, err := database.TODO.Exec("DELETE FROM session WHERE session_id = $1", cookie)
 	if err != nil {
 		return err
 	}

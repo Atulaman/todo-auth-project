@@ -4,13 +4,14 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"todo-auth/utils"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 )
+
+var TODO *sql.DB
 
 func migrateUp(db *sql.DB) {
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
@@ -28,7 +29,7 @@ func migrateUp(db *sql.DB) {
 		log.Fatal(err)
 	}
 }
-func Connect() *sql.DB {
+func Connect() {
 	connStr := "host=localhost port=5433 user=postgres password=rx dbname=todo sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
@@ -41,6 +42,9 @@ func Connect() *sql.DB {
 	}
 	fmt.Println("Connected to the database successfully!")
 	migrateUp(db)
-	utils.SetDatabase(db)
-	return db
+	TODO = db
+	//return db
+}
+func ShutDownDb() error {
+	return TODO.Close()
 }

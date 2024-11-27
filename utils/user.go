@@ -1,28 +1,14 @@
 package utils
 
-import (
-	"database/sql"
-	"fmt"
+import "net/http"
 
-	"todo-auth/handler"
-	"todo-auth/middlewares"
-
-	_ "github.com/lib/pq"
-)
-
-var db *sql.DB
-
-func SetDatabase(DB *sql.DB) {
-	handler.SetDb(DB)
-	middlewares.SetDB(DB)
-	db = DB
-	fmt.Println("DB HAS BEEN INITIALIZED IN UTILS")
-
-}
-
-func GetDb() *sql.DB {
-	if db == nil {
-		fmt.Println("it is nil ")
+func GetSessionID(r *http.Request) (string, error) {
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			return "", http.ErrNoCookie
+		}
+		return "", err
 	}
-	return db
+	return cookie.Value, err
 }

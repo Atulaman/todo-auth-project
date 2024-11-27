@@ -11,8 +11,10 @@ import (
 )
 
 func main() {
-	db := database.Connect()
-	defer db.Close()
+	// db := database.Connect()
+	// defer db.Close()
+	database.Connect()
+	defer database.ShutDownDb()
 	r := routes.Routes()
 	fmt.Println("Server is running on http://localhost:8081")
 	log.Fatal(http.ListenAndServe(":8081", r))

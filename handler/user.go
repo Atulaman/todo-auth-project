@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+	dbhelper "todo-auth/database/db-helper"
+	"todo-auth/utils"
 	"unicode/utf8"
 
 	_ "github.com/lib/pq"
@@ -17,19 +19,7 @@ type User struct {
 	Password string `json:"password"`
 }
 
-var db *sql.DB
-
-//var db = utils.GetDb()
-
-func SetDb(DB *sql.DB) {
-	db = DB
-	//db = utils.GetDb()
-}
-
-//var db *sql.DB = utils.GetDb()
-
 func Register(w http.ResponseWriter, r *http.Request) {
-	//db := utils.GetDb()
 	var user User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
@@ -40,7 +30,8 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing/Invalid username or password", http.StatusBadRequest)
 		return
 	}
-	_, err = db.Exec("INSERT INTO auth (username, password) VALUES ($1, $2)", user.Username, user.Password)
+	//_, err = database.TODO.Exec("INSERT INTO auth (username, password) VALUES ($1, $2)", user.Username, user.Password)
+	err = dbhelper.CreateUser(user.Username, user.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -57,7 +48,6 @@ func generateSessionID() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 func Login(w http.ResponseWriter, r *http.Request) {
-	//db := utils.GetDb()
 	var user User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
@@ -68,11 +58,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing username or password", http.StatusBadRequest)
 		return
 	}
-	var (
-		username string
-		password string
-	)
-	err = db.QueryRow("SELECT username,password FROM auth WHERE username = $1 AND password = $2", user.Username, user.Password).Scan(&username, &password)
+	// var (
+	// 	username string
+	// 	password string
+	// )
+	//err = database.TODO.QueryRow("SELECT username,password FROM auth WHERE username = $1 AND password = $2", user.Username, user.Password).Scan(&username, &password)
+	err = dbhelper.IsUserExists(user.Username, user.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Invalid username or password", http.StatusUnauthorized)
@@ -86,7 +77,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error generating session ID", http.StatusInternalServerError)
 		return
 	}
-	_, err = db.Exec("INSERT INTO session (session_id, username, created_at) VALUES ($1, $2, $3)", sessionID, username, time.Now().UTC())
+	//_, err = database.TODO.Exec("INSERT INTO session (session_id, username, created_at) VALUES ($1, $2, $3)", sessionID, user.Username, time.Now().UTC())
+	err = dbhelper.SetSession(user.Username, sessionID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -108,8 +100,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
-	//db := utils.GetDb()
-	cookie, err := r.Cookie("session_id")
+	//cookie, err := r.Cookie("session_id")
+	cookie, err := utils.GetSessionID(r)
 	if err != nil {
 		if err == http.ErrNoCookie {
 			http.Error(w, "Already logged out", http.StatusUnauthorized)
@@ -119,7 +111,8 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = db.Exec("DELETE FROM session WHERE session_id = $1", cookie.Value)
+	//_, err = database.TODO.Exec("DELETE FROM session WHERE session_id = $1", cookie)
+	err = dbhelper.DeleteSession(cookie)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

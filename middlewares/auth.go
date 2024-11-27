@@ -4,20 +4,17 @@ import (
 	"database/sql"
 	"net/http"
 	"time"
+	"todo-auth/database"
+	"todo-auth/utils"
 
 	_ "github.com/lib/pq"
 )
 
-var db *sql.DB
-
-func SetDB(DB *sql.DB) {
-	db = DB
-	//db = utils.GetDb()
-}
 func Caller(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		cookie, err := r.Cookie("session_id")
+		//cookie, err := r.Cookie("session_id")
+		cookie, err := utils.GetSessionID(r)
 		if err != nil {
 			if err == http.ErrNoCookie {
 				http.Error(w, "Unauthorized user", http.StatusUnauthorized)
@@ -28,7 +25,7 @@ func Caller(next http.Handler) http.Handler {
 		}
 		var username string
 		var created_at time.Time
-		err = db.QueryRow("SELECT username, created_at FROM session WHERE session_id = $1", cookie.Value).Scan(&username, &created_at)
+		err = database.TODO.QueryRow("SELECT username, created_at FROM session WHERE session_id = $1", cookie).Scan(&username, &created_at)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				http.Error(w, "Unauthorized user", http.StatusUnauthorized)
@@ -39,7 +36,7 @@ func Caller(next http.Handler) http.Handler {
 		}
 		duration := time.Now().UTC().Sub(created_at) //time.Since(created_at)
 		if duration >= 5*time.Minute {
-			_, err = db.Exec("DELETE FROM session WHERE session_id = $1", cookie.Value)
+			_, err = database.TODO.Exec("DELETE FROM session WHERE session_id = $1", cookie)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
