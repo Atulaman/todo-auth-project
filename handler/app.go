@@ -3,10 +3,10 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"todo-auth/database"
+	dbhelper "todo-auth/database/db-helper"
 	"todo-auth/utils"
 
 	_ "github.com/lib/pq"
@@ -24,9 +24,10 @@ func Add(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
-	cookie, _ := r.Cookie("session_id")
-	var username string
-	err = database.TODO.QueryRow(`SELECT username FROM session WHERE session_id=$1`, cookie.Value).Scan(&username)
+	// cookie, _ := r.Cookie("session_id")
+	// var username string
+	// err = database.TODO.QueryRow(`SELECT username FROM session WHERE session_id=$1`, cookie.Value).Scan(&username)
+	username, err := dbhelper.GetUser(r)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Unauthorized user", http.StatusUnauthorized)
@@ -35,36 +36,43 @@ func Add(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	p, err := database.TODO.Query(`SELECT
-	CASE
-	WHEN (SELECT id FROM "Tasks" WHERE id=1 AND username=$1) IS NULL THEN 1
-	ELSE
-	(select coalesce(min(t1.id +1),1) from (SELECT id FROM "Tasks" WHERE username=$1) t1 left join (SELECT id FROM "Tasks" WHERE username=$1) t2 on t1.id +1 =t2.id  where t2.id is null)
-	END
-	`, username)
-	// 	p, err := db.Query(`SELECT
+	// p, err := database.TODO.Query(`SELECT
 	// CASE
-	// WHEN (SELECT t1.id FROM "Tasks" t1 JOIN session s ON t1.username=s.username WHERE id=1 AND s.session_id=$1 ) IS NULL THEN 1
+	// WHEN (SELECT id FROM "Tasks" WHERE id=1 AND username=$1) IS NULL THEN 1
 	// ELSE
-	// (select coalesce(min(t1.id +1),1) from (SELECT t1.id FROM "Tasks" t1 JOIN session s ON t1.username=s.username WHERE s.session_id=$1) t1 left join (SELECT t1.id FROM "Tasks" t1 JOIN session s ON t1.username=s.username WHERE s.session_id=$1) t2 on t1.id +1 =t2.id where t2.id is null)
-	// END`, cookie.Value)
+	// (select coalesce(min(t1.id +1),1) from (SELECT id FROM "Tasks" WHERE username=$1) t1 left join (SELECT id FROM "Tasks" WHERE username=$1) t2 on t1.id +1 =t2.id  where t2.id is null)
+	// END
+	// `, username)
+	// // 	p, err := db.Query(`SELECT
+	// // CASE
+	// // WHEN (SELECT t1.id FROM "Tasks" t1 JOIN session s ON t1.username=s.username WHERE id=1 AND s.session_id=$1 ) IS NULL THEN 1
+	// // ELSE
+	// // (select coalesce(min(t1.id +1),1) from (SELECT t1.id FROM "Tasks" t1 JOIN session s ON t1.username=s.username WHERE s.session_id=$1) t1 left join (SELECT t1.id FROM "Tasks" t1 JOIN session s ON t1.username=s.username WHERE s.session_id=$1) t2 on t1.id +1 =t2.id where t2.id is null)
+	// // END`, cookie.Value)
+	// if err != nil {
+	// 	http.Error(w, "Error while generating id", http.StatusInternalServerError)
+	// 	//log.Fatal(err)
+	// 	return
+	// }
+	// p.Next()
+	// if err := p.Scan(&newTask.Id); err != nil {
+	// 	log.Fatal(err)
+	// }
+	newTask.Id, err = dbhelper.GetTaskId(username)
 	if err != nil {
 		http.Error(w, "Error while generating id", http.StatusInternalServerError)
 		//log.Fatal(err)
 		return
 	}
-	p.Next()
-	if err := p.Scan(&newTask.Id); err != nil {
-		log.Fatal(err)
-	}
 
-	result, err := database.TODO.Exec(`INSERT INTO "Tasks" (id,description,username) VALUES ($1,$2,$3)`, newTask.Id, newTask.Desc, username)
+	// result, err := database.TODO.Exec(`INSERT INTO "Tasks" (id,description,username) VALUES ($1,$2,$3)`, newTask.Id, newTask.Desc, username)
+	err = dbhelper.CreateTask(username, newTask.Desc, newTask.Id)
 	if err != nil {
 		http.Error(w, "Error while adding task", http.StatusInternalServerError)
 		return
 		//log.Fatal(err)
 	}
-	fmt.Println(result)
+	//fmt.Println(result)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{"message": "Task added successfully", "task": newTask})
