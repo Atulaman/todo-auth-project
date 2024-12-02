@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 	dbhelper "todo-auth/database/db-helper"
+	log "todo-auth/logging"
 	"todo-auth/utils"
 	"unicode/utf8"
 
@@ -24,20 +25,24 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Logging(err, "Error decoding request body", 400, "warning", r)
 		return
 	}
 	if user.Username == "" || user.Password == "" || utf8.RuneCountInString(user.Username) > 20 || utf8.RuneCountInString(user.Password) > 20 || utf8.RuneCountInString(user.Password) < 8 || utf8.RuneCountInString(user.Username) < 8 {
 		http.Error(w, "Missing/Invalid username or password", http.StatusBadRequest)
+		log.Logging(err, "Missing/Invalid username or password", 400, "warning", r)
 		return
 	}
 	//_, err = database.TODO.Exec("INSERT INTO auth (username, password) VALUES ($1, $2)", user.Username, user.Password)
 	err = dbhelper.CreateUser(user.Username, user.Password)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Logging(err, "Error creating user", 500, "error", r)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"message": "Registration successful"})
+	log.Logging(nil, "Registration successful", 200, "info", r)
 }
 func generateSessionID() (string, error) {
 	b := make([]byte, 32)
@@ -52,10 +57,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Logging(err, "Error decoding request body", 400, "warning", r)
 		return
 	}
 	if user.Username == "" || user.Password == "" {
 		http.Error(w, "Missing username or password", http.StatusBadRequest)
+		log.Logging(err, "Missing username or password", 400, "warning", r)
 		return
 	}
 	// var (
@@ -67,20 +74,24 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+			log.Logging(err, "Invalid username or password", 401, "warning", r)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Logging(err, "Error checking user", 500, "error", r)
 		return
 	}
 	sessionID, err := generateSessionID()
 	if err != nil {
 		http.Error(w, "Error generating session ID", http.StatusInternalServerError)
+		log.Logging(err, "Error generating session ID", 500, "error", r)
 		return
 	}
 	//_, err = database.TODO.Exec("INSERT INTO session (session_id, username, created_at) VALUES ($1, $2, $3)", sessionID, user.Username, time.Now().UTC())
 	err = dbhelper.SetSession(user.Username, sessionID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Logging(err, "Error creating session", 500, "error", r)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -90,13 +101,14 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
-	if r.URL.Path == "/login" {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"message": "Login successful"})
-	}
+	// if r.URL.Path == "/login" {
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	json.NewEncoder(w).Encode(map[string]interface{}{"message": "Login successful"})
+	// }
 
-	// w.Header().Set("Content-Type", "application/json")
-	// json.NewEncoder(w).Encode(map[string]interface{}{"message": "Login successful"})
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"message": "Login successful"})
+	log.Logging(nil, "Login successful", 200, "info", r)
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
@@ -130,6 +142,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{"message": "Logout successful"})
 	}
+	log.Logging(nil, "Logout successful", 200, "info", r)
 	// w.Header().Set("Content-Type", "application/json")
 	// json.NewEncoder(w).Encode(map[string]interface{}{"message": "Logout successful"})
 }

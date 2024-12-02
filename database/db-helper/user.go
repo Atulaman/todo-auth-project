@@ -9,8 +9,8 @@ import (
 )
 
 func CreateUser(username string, password string) error {
-
-	_, err := database.TODO.Exec("INSERT INTO auth (username, password) VALUES ($1, $2)", username, password)
+	query := `INSERT INTO auth (username, password) VALUES ($1, $2)`
+	_, err := database.TODO.Exec(query, username, password)
 	if err != nil {
 		return err
 	}
@@ -19,7 +19,8 @@ func CreateUser(username string, password string) error {
 
 func IsUserExists(username, password string) error {
 	var user string
-	err := database.TODO.QueryRow("SELECT username FROM auth WHERE username = $1 AND password = $2", username, password).Scan(&user)
+	query := `SELECT username FROM auth WHERE username = $1 AND password = $2`
+	err := database.TODO.Get(&user, query, username, password)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return err
@@ -29,14 +30,16 @@ func IsUserExists(username, password string) error {
 	return nil
 }
 func SetSession(username string, sessionID string) error {
-	_, err := database.TODO.Exec("INSERT INTO session (session_id, username, created_at) VALUES ($1, $2, $3)", sessionID, username, time.Now().UTC())
+	query := `INSERT INTO session (session_id, username, created_at) VALUES ($1, $2, $3)`
+	_, err := database.TODO.Exec(query, sessionID, username, time.Now().UTC())
 	if err != nil {
 		return err
 	}
 	return nil
 }
 func DeleteSession(cookie string) error {
-	_, err := database.TODO.Exec("DELETE FROM session WHERE session_id = $1", cookie)
+	query := `DELETE FROM session WHERE session_id = $1`
+	_, err := database.TODO.Exec(query, cookie)
 	if err != nil {
 		return err
 	}
