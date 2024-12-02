@@ -56,10 +56,10 @@ func Logging(err error, message string, code int, severity string, r *http.Reque
 	}
 	entity := Logger.WithFields(logrus.Fields{
 		//"message": message,
-		"Path":   path,
-		"Method": method,
-		"Code":   code,
-		"Error":  errorMessage,
+		"Path":       path,
+		"Method":     method,
+		"StatusCode": code,
+		"Error":      errorMessage,
 	})
 	switch severity {
 	case "info":

@@ -19,6 +19,18 @@ type task struct {
 	Desc string `json:"desc"`
 }
 
+// Add godoc
+// @Summary Add a new task
+// @Description Add a new task for the logged-in user
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param task body task true "task to add"
+// @Success 200 {object} map[string]interface{} "Task added successfully"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 500 {object} map[string]string "Error adding task"
+// @Router /tasks [post]
 func Add(w http.ResponseWriter, r *http.Request) {
 	var newTask task
 	err := json.NewDecoder(r.Body).Decode(&newTask)
@@ -55,6 +67,17 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"message": "Task added successfully", "task": newTask})
 	log.Logging(err, "Task added successfully", 201, "info", r)
 }
+
+// List godoc
+// @Summary List all tasks
+// @Description Get all tasks for the logged-in user
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Success 200 {object} []task "tasks fetched successfully"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 500 {object} map[string]string "Error fetching tasks"
+// @Router /tasks [get]
 func List(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := utils.GetSessionID(r)
 	query := `SELECT t1.id, t1.description
@@ -82,6 +105,20 @@ func List(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"tasks": tasks, "message": "success", "count": len(tasks)})
 	log.Logging(err, "Tasks fetched successfully", 200, "info", r)
 }
+
+// Update godoc
+// @Summary Update a task
+// @Description Update the description of an existing task
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param task body task true "task to update"
+// @Success 200 {object} map[string]interface{} "task updated successfully"
+// @Failure 400 {object} map[string]string "Invalid task ID or description"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "task not found"
+// @Failure 500 {object} map[string]string "Error updating task"
+// @Router /tasks [put]
 func Update(w http.ResponseWriter, r *http.Request) {
 	var newTask task
 	err := json.NewDecoder(r.Body).Decode(&newTask)
@@ -126,6 +163,20 @@ func Update(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{"message": "Task Updated successfully", "task": newTask})
 	log.Logging(err, "Task updated successfully", 200, "info", r)
 }
+
+// Delete godoc
+// @Summary Delete a task
+// @Description Delete a task by its ID
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param task body task true "task to delete"
+// @Success 200 {object} map[string]string "task deleted successfully"
+// @Failure 400 {object} map[string]string "Invalid task ID"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "task not found"
+// @Failure 500 {object} map[string]string "Error deleting task"
+// @Router /tasks [delete]
 func Delete(w http.ResponseWriter, r *http.Request) {
 	var newTask task
 	err := json.NewDecoder(r.Body).Decode(&newTask)

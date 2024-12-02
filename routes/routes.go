@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func apiroutes() chi.Router {
@@ -36,5 +37,6 @@ func Routes() chi.Router {
 		})
 		r.Mount("/", apiroutes())
 	})
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
 	return r
 }
