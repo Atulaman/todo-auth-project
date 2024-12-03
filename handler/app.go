@@ -83,7 +83,7 @@ func List(w http.ResponseWriter, r *http.Request) {
 	query := `SELECT t1.id, t1.description
 					FROM "Tasks" t1
 							JOIN session a ON t1.username = a.username
-					where a.session_id = $1
+					where a.session_id = $1 AND t1.archive = false
 					ORDER BY t1.id ASC `
 	tasks := []struct {
 		Id   int    `db:"id"`
@@ -141,7 +141,7 @@ func Update(w http.ResponseWriter, r *http.Request) {
 		log.Logging(err, "Error checking user", 500, "error", r)
 		return
 	}
-	result, err := database.TODO.Exec(`UPDATE "Tasks" SET description=$2 WHERE id=$1 AND username=$3`, newTask.Id, newTask.Desc, username)
+	result, err := database.TODO.Exec(`UPDATE "Tasks" SET description=$2 WHERE id=$1 AND username=$3 AND archive = false`, newTask.Id, newTask.Desc, username)
 	if err != nil {
 		http.Error(w, "Error while updating task", http.StatusInternalServerError)
 		log.Logging(err, "Error while updating task", 500, "error", r)
@@ -201,11 +201,12 @@ WHERE session_id = $1`
 		log.Logging(err, "Error checking user", 500, "error", r)
 		return
 	}
-	query = `DELETE
-FROM "Tasks"
-WHERE id = $1
-  AND username = $2`
-	result, err := database.TODO.Exec(query, newTask.Id, username)
+	// 	query = `DELETE
+	// FROM "Tasks"
+	// WHERE id = $1
+	//   AND username = $2`
+	// 	result, err := database.TODO.Exec(query, newTask.Id, username)
+	result, err := database.TODO.Exec(`UPDATE "Tasks" SET archive = true WHERE id=$1 AND username=$2 AND archive = false`, newTask.Id, username)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		log.Logging(err, "Database error", 500, "error", r)
