@@ -24,7 +24,6 @@ var Logger *logrus.Logger
 // 	Logger.SetLevel(logrus.InfoLevel)
 // 	//Logger.SetOutput(log.StandardLogger().Out)
 // 	Logger.SetOutput(os.Stdout)
-
 // }
 
 func init() {
