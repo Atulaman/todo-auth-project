@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	"encoding/json"
 	"net/http"
 	"time"
 	dbhelper "todo-auth/database/db-helper"
@@ -33,26 +32,24 @@ type User struct {
 // @Router /register [post]
 func Register(w http.ResponseWriter, r *http.Request) {
 	var user User
-	err := json.NewDecoder(r.Body).Decode(&user)
+	err := utils.DecodeJson(r, &user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.ResponseError(w, err.Error(), http.StatusBadRequest)
 		log.Logging(err, "Error decoding request body", 400, "warning", r)
 		return
 	}
 	if user.Username == "" || user.Password == "" || utf8.RuneCountInString(user.Username) > 20 || utf8.RuneCountInString(user.Password) > 20 || utf8.RuneCountInString(user.Password) < 8 || utf8.RuneCountInString(user.Username) < 8 {
-		http.Error(w, "Missing/Invalid username or password", http.StatusBadRequest)
+		utils.ResponseError(w, "Missing/Invalid username or password", http.StatusBadRequest)
 		log.Logging(err, "Missing/Invalid username or password", 400, "warning", r)
 		return
 	}
-	//_, err = database.TODO.Exec("INSERT INTO auth (username, password) VALUES ($1, $2)", user.Username, user.Password)
 	err = dbhelper.CreateUser(user.Username, user.Password)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.ResponseError(w, err.Error(), http.StatusInternalServerError)
 		log.Logging(err, "Error creating user", 500, "error", r)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"message": "Registration successful"})
+	utils.ResponseJson(w, http.StatusOK, map[string]interface{}{"message": "Registration successful"})
 	log.Logging(nil, "Registration successful", 200, "info", r)
 }
 func generateSessionID() (string, error) {
@@ -78,43 +75,37 @@ func generateSessionID() (string, error) {
 // @Router /login [post]
 func Login(w http.ResponseWriter, r *http.Request) {
 	var user User
-	err := json.NewDecoder(r.Body).Decode(&user)
+	err := utils.DecodeJson(r, &user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		utils.ResponseError(w, err.Error(), http.StatusBadRequest)
 		log.Logging(err, "Error decoding request body", 400, "warning", r)
 		return
 	}
 	if user.Username == "" || user.Password == "" {
-		http.Error(w, "Missing username or password", http.StatusBadRequest)
+		utils.ResponseError(w, "Missing username or password", http.StatusBadRequest)
 		log.Logging(err, "Missing username or password", 400, "warning", r)
 		return
 	}
-	// var (
-	// 	username string
-	// 	password string
-	// )
-	//err = database.TODO.QueryRow("SELECT username,password FROM auth WHERE username = $1 AND password = $2", user.Username, user.Password).Scan(&username, &password)
 	err = dbhelper.IsUserExists(user.Username, user.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+			utils.ResponseError(w, "Invalid username or password", http.StatusUnauthorized)
 			log.Logging(err, "Invalid username or password", 401, "warning", r)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.ResponseError(w, err.Error(), http.StatusInternalServerError)
 		log.Logging(err, "Error checking user", 500, "error", r)
 		return
 	}
 	sessionID, err := generateSessionID()
 	if err != nil {
-		http.Error(w, "Error generating session ID", http.StatusInternalServerError)
+		utils.ResponseError(w, "Error generating session ID", http.StatusInternalServerError)
 		log.Logging(err, "Error generating session ID", 500, "error", r)
 		return
 	}
-	//_, err = database.TODO.Exec("INSERT INTO session (session_id, username, created_at) VALUES ($1, $2, $3)", sessionID, user.Username, time.Now().UTC())
 	err = dbhelper.SetSession(user.Username, sessionID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.ResponseError(w, err.Error(), http.StatusInternalServerError)
 		log.Logging(err, "Error creating session", 500, "error", r)
 		return
 	}
@@ -125,13 +116,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
-	// if r.URL.Path == "/login" {
-	// 	w.Header().Set("Content-Type", "application/json")
-	// 	json.NewEncoder(w).Encode(map[string]interface{}{"message": "Login successful"})
-	// }
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"message": "Login successful"})
+	utils.ResponseJson(w, http.StatusOK, map[string]interface{}{"message": "Login successful"})
 	log.Logging(nil, "Login successful", 200, "info", r)
 }
 
@@ -146,21 +131,22 @@ func Login(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} map[string]string "Error deleting session"
 // @Router /logout [post]
 func Logout(w http.ResponseWriter, r *http.Request) {
-	//cookie, err := r.Cookie("session_id")
 	cookie, err := utils.GetSessionID(r)
 	if err != nil {
 		if err == http.ErrNoCookie {
-			http.Error(w, "Already logged out", http.StatusUnauthorized)
+			utils.ResponseError(w, "Already logged out", http.StatusUnauthorized)
+			log.Logging(err, "Already logged out", 401, "warning", r)
 			return
 		}
-		http.Error(w, "Error retrieving cookie", http.StatusInternalServerError)
+		utils.ResponseError(w, "Error retrieving cookie", http.StatusInternalServerError)
+		log.Logging(err, "Error retrieving cookie", http.StatusInternalServerError, "error", r)
 		return
 	}
 
-	//_, err = database.TODO.Exec("DELETE FROM session WHERE session_id = $1", cookie)
 	err = dbhelper.DeleteSession(cookie)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.ResponseError(w, "Error deleting session", http.StatusInternalServerError)
+		log.Logging(err, "Error deleting session", 500, "error", r)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -172,11 +158,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
-	if r.URL.Path == "/logout" {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"message": "Logout successful"})
-	}
+
+	utils.ResponseJson(w, http.StatusOK, map[string]interface{}{"message": "Logout successful"})
 	log.Logging(nil, "Logout successful", 200, "info", r)
-	// w.Header().Set("Content-Type", "application/json")
-	// json.NewEncoder(w).Encode(map[string]interface{}{"message": "Logout successful"})
 }

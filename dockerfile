@@ -17,5 +17,5 @@ COPY --from=builder /app/bin/app .
 COPY /database/migrations /app/database/migrations
 
 #RUN chmod 777 /app
-EXPOSE 8080
+EXPOSE 8081
 CMD [ "./app" ]

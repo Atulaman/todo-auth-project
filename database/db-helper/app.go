@@ -1,10 +1,16 @@
 package dbhelper
 
 import (
+	"database/sql"
 	"net/http"
 	"todo-auth/database"
 	"todo-auth/utils"
 )
+
+// type TaskGet struct {
+// 	Id   int    `db:"id"`
+// 	Desc string `db:"description"`
+// }
 
 func GetTaskId(username string) (int, error) {
 	query := `SELECT
@@ -38,4 +44,35 @@ func CreateTask(username string, desc string, id int) error {
 	query := `INSERT INTO "Tasks" (id,description,username) VALUES ($1,$2,$3)`
 	_, err := database.TODO.Exec(query, id, desc, username)
 	return err
+}
+
+// list controller
+func GetTask(r *http.Request) (tasks []struct {
+	Id   int    `db:"id"`
+	Desc string `db:"description"`
+}, err error) {
+	cookie, _ := utils.GetSessionID(r)
+	query := `SELECT t1.id, t1.description
+					FROM "Tasks" t1
+							JOIN session a ON t1.username = a.username
+					where a.session_id = $1 AND t1.archive = false
+					ORDER BY t1.id ASC `
+
+	err = database.TODO.Select(&tasks, query, cookie)
+	return
+}
+
+// UPDATE
+func UpdateTask(id int, desc string, username string) (result sql.Result, err error) {
+	query := `UPDATE "Tasks" SET description=$2 WHERE id=$1 AND username=$3 AND archive = false`
+	result, err = database.TODO.Exec(query, id, desc, username)
+	//return result, err
+	return
+}
+
+// DELETE
+func DeleteTask(id int, username string) (result sql.Result, err error) {
+	query := `UPDATE "Tasks" SET archive = true WHERE id=$1 AND username=$2 AND archive = false`
+	result, err = database.TODO.Exec(query, id, username)
+	return
 }

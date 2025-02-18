@@ -17,11 +17,11 @@ func Caller(next http.Handler) http.Handler {
 		cookie, err := utils.GetSessionID(r)
 		if err != nil {
 			if err == http.ErrNoCookie {
-				http.Error(w, "Unauthorized user", http.StatusUnauthorized)
+				utils.ResponseError(w, "Unauthorized user", http.StatusUnauthorized)
 				log.Logging(err, "Unauthorized user", 401, "warning", r)
 				return
 			}
-			http.Error(w, "Error retrieving cookie", http.StatusInternalServerError)
+			utils.ResponseError(w, "Error retrieving cookie", http.StatusInternalServerError)
 			log.Logging(err, "Error retrieving cookie", 500, "error", r)
 			return
 		}
@@ -38,18 +38,18 @@ func Caller(next http.Handler) http.Handler {
 		created_at = data.CreatedAt
 		if err != nil {
 			if err == sql.ErrNoRows {
-				http.Error(w, "Unauthorized user", http.StatusUnauthorized)
+				utils.ResponseError(w, "Unauthorized user", http.StatusUnauthorized)
 				log.Logging(err, "Unauthorized user", 401, "warning", r)
 				return
 			}
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			utils.ResponseError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		duration := time.Now().UTC().Sub(created_at) //time.Since(created_at)
 		if duration >= 5*time.Minute {
 			_, err = database.TODO.Exec("DELETE FROM session WHERE session_id = $1", cookie)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				utils.ResponseError(w, err.Error(), http.StatusInternalServerError)
 				log.Logging(err, "Error deleting session", 500, "error", r)
 				return
 			}
@@ -62,7 +62,7 @@ func Caller(next http.Handler) http.Handler {
 				Secure:   true,
 				SameSite: http.SameSiteLaxMode,
 			})
-			http.Error(w, "Unauthorized user", http.StatusUnauthorized)
+			utils.ResponseError(w, "Unauthorized user", http.StatusUnauthorized)
 			log.Logging(err, "Unauthorized user", 401, "warning", r)
 			return
 		}
