@@ -1,0 +1,290 @@
+basePath: /
+definitions:
+  handler.User:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  handler.task:
+    properties:
+      desc:
+        type: string
+      id:
+        type: integer
+    type: object
+host: localhost:8081
+info:
+  contact: {}
+  description: This is a sample server for a To-Do app.
+  title: To-Do API
+  version: "1.0"
+paths:
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a user and create a session
+      parameters:
+      - description: User login credentials
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/handler.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid username or password
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Error logging in
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login a user
+      tags:
+      - auth
+  /logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout a user by invalidating their session
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout successful
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Already logged out or invalid session
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Error deleting session
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Logout a user
+      tags:
+      - auth
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user with a username and password
+      parameters:
+      - description: User registration data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/handler.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Registration successful
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid username or password
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Error inserting user or user already exists
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - auth
+  /tasks:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a task by its ID
+      parameters:
+      - description: task to delete
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/handler.task'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: task deleted successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid task ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: task not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Error deleting task
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a task
+      tags:
+      - tasks
+    get:
+      consumes:
+      - application/json
+      description: Get all tasks for the logged-in user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: tasks fetched successfully
+          schema:
+            items:
+              $ref: '#/definitions/handler.task'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Error fetching tasks
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all tasks
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      description: Add a new task for the logged-in user
+      parameters:
+      - description: task to add
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/handler.task'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task added successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Error adding task
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Add a new task
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      description: Update the description of an existing task
+      parameters:
+      - description: task to update
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/handler.task'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: task updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid task ID or description
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: task not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Error updating task
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a task
+      tags:
+      - tasks
+swagger: "2.0"

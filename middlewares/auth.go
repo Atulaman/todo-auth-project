@@ -4,44 +4,53 @@ import (
 	"database/sql"
 	"net/http"
 	"time"
+	"todo-auth/database"
+	log "todo-auth/logging"
+	"todo-auth/utils"
 
 	_ "github.com/lib/pq"
 )
 
-var db *sql.DB
-
-func SetDB(DB *sql.DB) {
-	db = DB
-	//db = utils.GetDb()
-}
 func Caller(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		cookie, err := r.Cookie("session_id")
+		cookie, err := utils.GetSessionID(r)
 		if err != nil {
 			if err == http.ErrNoCookie {
-				http.Error(w, "Unauthorized user", http.StatusUnauthorized)
+				utils.ResponseError(w, "Unauthorized user", http.StatusUnauthorized)
+				log.Logging(err, "Unauthorized user", 401, "warning", r)
 				return
 			}
-			http.Error(w, "Error retrieving cookie", http.StatusInternalServerError)
+			utils.ResponseError(w, "Error retrieving cookie", http.StatusInternalServerError)
+			log.Logging(err, "Error retrieving cookie", 500, "error", r)
 			return
 		}
-		var username string
+		//var username string
 		var created_at time.Time
-		err = db.QueryRow("SELECT username, created_at FROM session WHERE session_id = $1", cookie.Value).Scan(&username, &created_at)
+		data := &struct {
+			Username  string    `db:"username"`
+			CreatedAt time.Time `db:"created_at"`
+		}{}
+		query := `SELECT username, created_at
+		FROM session
+		WHERE session_id = $1`
+		err = database.TODO.Get(data, query, cookie)
+		created_at = data.CreatedAt
 		if err != nil {
 			if err == sql.ErrNoRows {
-				http.Error(w, "Unauthorized user", http.StatusUnauthorized)
+				utils.ResponseError(w, "Unauthorized user", http.StatusUnauthorized)
+				log.Logging(err, "Unauthorized user", 401, "warning", r)
 				return
 			}
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			utils.ResponseError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		duration := time.Now().UTC().Sub(created_at) //time.Since(created_at)
 		if duration >= 5*time.Minute {
-			_, err = db.Exec("DELETE FROM session WHERE session_id = $1", cookie.Value)
+			_, err = database.TODO.Exec("DELETE FROM session WHERE session_id = $1", cookie)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				utils.ResponseError(w, err.Error(), http.StatusInternalServerError)
+				log.Logging(err, "Error deleting session", 500, "error", r)
 				return
 			}
 			http.SetCookie(w, &http.Cookie{
@@ -53,7 +62,8 @@ func Caller(next http.Handler) http.Handler {
 				Secure:   true,
 				SameSite: http.SameSiteLaxMode,
 			})
-			http.Error(w, "Unauthorized user", http.StatusUnauthorized)
+			utils.ResponseError(w, "Unauthorized user", http.StatusUnauthorized)
+			log.Logging(err, "Unauthorized user", 401, "warning", r)
 			return
 		}
 		next.ServeHTTP(w, r)

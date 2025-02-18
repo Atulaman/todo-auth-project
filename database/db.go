@@ -1,10 +1,15 @@
 package database
 
 import (
-	"database/sql"
+	//"database/sql"
 	"fmt"
-	"log"
-	"todo-auth/utils"
+	"os"
+
+	//"log"
+
+	"github.com/jmoiron/sqlx"
+
+	log "todo-auth/logging"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -12,35 +17,43 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func migrateUp(db *sql.DB) {
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
+var TODO *sqlx.DB
+
+func migrateUp(db *sqlx.DB) {
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
 	if err != nil {
-		log.Fatal(err)
+		log.Logging(err, "Failed to connect to the database", 500, "fatal", nil)
 	}
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://database/migrations",
 		"postgres", driver)
 	if err != nil {
-		log.Fatal(err)
+		log.Logging(err, "Failed to connect to the database", 500, "fatal", nil)
 	}
 	//err =m.Up() // or m.Steps(2) if you want to explicitly set the number of migrations to run
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatal(err)
+		log.Logging(err, "Failed to migrate the database", 500, "fatal", nil)
 	}
 }
-func Connect() *sql.DB {
-	connStr := "host=localhost port=5433 user=postgres password=rx dbname=todo sslmode=disable"
-	db, err := sql.Open("postgres", connStr)
+func Connect() {
+	//connStr := "host=localhost port=5433 user=postgres password=rx dbname=todo sslmode=disable"
+	// connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), "postgres", "rx", "todo")
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"))
+
+	db, err := sqlx.Open("postgres", connStr)
 	if err != nil {
-		log.Fatal(err)
+		log.Logging(err, "Failed to connect to the database", 500, "fatal", nil)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		log.Fatal("Failed to connect to the database:", err)
+		log.Logging(err, "Failed to connect to the database", 500, "fatal", nil)
 	}
 	fmt.Println("Connected to the database successfully!")
+	log.Logging(nil, "Connected to the database successfully!", 200, "info", nil)
 	migrateUp(db)
-	utils.SetDatabase(db)
-	return db
+	TODO = db
+}
+func ShutDownDb() error {
+	return TODO.Close()
 }

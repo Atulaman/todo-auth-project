@@ -10,3 +10,16 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=rx
       - POSTGRES_DB=todo
+
+  app:
+    build: .
+    ports:
+      - "8080:8081"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=rx
+      - DB_NAME=todo
